@@ -1,6 +1,7 @@
 """게임 전체를 관리하는 QuizGame 클래스."""
 from data import default_quizzes
-from io_utils import ExitRequested, read_int
+from io_utils import ExitRequested, read_int, read_nonempty
+from quiz import CHOICE_COUNT, Quiz
 
 LINE = "=" * 40
 
@@ -47,6 +48,17 @@ class QuizGame:
         print(LINE)
         return score
 
+    def add_quiz(self):
+        """문제, 선택지 4개, 정답 번호를 입력받아 퀴즈를 등록한다."""
+        print()
+        print("📌 새로운 퀴즈를 추가합니다.")
+        print()
+        question = read_nonempty("문제를 입력하세요: ")
+        choices = [read_nonempty(f"선택지 {number}: ") for number in range(1, CHOICE_COUNT + 1)]
+        answer = read_int(f"정답 번호 (1-{CHOICE_COUNT}): ", 1, CHOICE_COUNT)
+        self.quizzes.append(Quiz(question, choices, answer))
+        print("✅ 퀴즈가 추가되었습니다!")
+
     def run(self):
         try:
             while True:
@@ -56,6 +68,8 @@ class QuizGame:
                     break
                 if choice == 1:
                     self.play_quiz()
+                elif choice == 2:
+                    self.add_quiz()
                 else:
                     print("(준비 중인 기능입니다)")
         except ExitRequested:
