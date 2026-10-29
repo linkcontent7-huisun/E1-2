@@ -28,8 +28,8 @@ class QuizGame:
             return None
         total = len(self.quizzes)
         correct = 0
-        print(f"
-📝 퀴즈를 시작합니다! (총 {total}문제)")
+        print()
+        print(f"📝 퀴즈를 시작합니다! (총 {total}문제)")
         for number, quiz in enumerate(self.quizzes, start=1):
             print("-" * 40)
             print(f"[문제 {number}]")
