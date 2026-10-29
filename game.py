@@ -85,7 +85,7 @@ class QuizGame:
         try:
             with open(self.state_path, "w", encoding="utf-8") as file:
                 json.dump(data, file, ensure_ascii=False, indent=2)
-        except OSError as error:
+        except (OSError, ValueError) as error:  # 인코딩 오류(UnicodeError)도 ValueError의 하위 클래스
             print(f"⚠️ 저장하지 못했습니다: {error}")
 
     def show_menu(self):
