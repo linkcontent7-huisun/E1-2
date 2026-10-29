@@ -1,10 +1,15 @@
 """게임 전체를 관리하는 QuizGame 클래스."""
+from data import default_quizzes
 from io_utils import ExitRequested, read_int
 
 LINE = "=" * 40
 
 
 class QuizGame:
+    def __init__(self):
+        self.quizzes = default_quizzes()
+        self.best_score = None  # 아직 풀지 않았으면 None
+
     def show_menu(self):
         print(LINE)
         print("🎯 나만의 퀴즈 게임 🎯")
