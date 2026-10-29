@@ -4,11 +4,12 @@ import random
 from pathlib import Path
 
 from data import default_quizzes
-from io_utils import ExitRequested, read_int, read_nonempty
+from io_utils import ExitRequested, read_int, read_nonempty, read_text
 from quiz import CHOICE_COUNT, Quiz
 
 LINE = "=" * 40
-STATE_PATH = Path(__file__).resolve().parent / "state.json"  # 프로젝트 루트
+HINT_CREDIT = 0.5  # 힌트를 쓰고 맞히면 인정되는 점수 비율
+STATE_PATH =Path(__file__).resolve().parent / "state.json"  # 프로젝트 루트
 
 
 class QuizGame:
@@ -92,6 +93,8 @@ class QuizGame:
         selected = random.sample(self.quizzes, count)  # 순서를 섞어 count개를 뽑는다
         total = len(selected)
         correct = 0
+        points = 0.0  # 힌트 없이 맞히면 1점, 힌트를 쓰고 맞히면 HINT_CREDIT점
+        hints_used = 0
         print()
         print(f"📝 퀴즈를 시작합니다! (총 {total}문제)")
         for number, quiz in enumerate(selected, start=1):
@@ -99,20 +102,41 @@ class QuizGame:
             print(f"[문제 {number}]")
             quiz.display()
             print()
-            choice = read_int("정답 입력: ", 1, len(quiz.choices))
-            if quiz.is_correct(choice):
+            is_correct, used_hint = self.ask_question(quiz)
+            hints_used += used_hint
+            if is_correct:
                 correct += 1
+                points += HINT_CREDIT if used_hint else 1
                 print("✅ 정답입니다!")
             else:
                 print(f"❌ 오답입니다. 정답은 {quiz.answer}번입니다.")
-        score = round(correct / total * 100)
+        score = round(points / total * 100)
         print(LINE)
         print(f"🏆 결과: {total}문제 중 {correct}문제 정답! ({score}점)")
+        if hints_used:
+            print(f"💡 힌트 {hints_used}회 사용: 힌트를 쓴 정답은 {HINT_CREDIT}점만 인정됩니다.")
         if self.update_best(score, correct, total):
             self.save_state()
             print("🎉 새로운 최고 점수입니다!")
         print(LINE)
         return score
+
+    def ask_question(self, quiz):
+        """한 문제의 답을 받는다. 0을 입력하면 힌트를 볼 수 있다(문제당 1회).
+
+        (정답 여부, 힌트 사용 여부)를 돌려준다.
+        """
+        used_hint = False
+        while True:
+            choice = read_int("정답 입력 (힌트 보기: 0): ", 0, len(quiz.choices))
+            if choice != 0:
+                return quiz.is_correct(choice), used_hint
+            if used_hint:
+                print("⚠️ 이 문제의 힌트는 이미 확인했습니다.")
+            elif quiz.show_hint():
+                used_hint = True
+            else:
+                print("⚠️ 이 문제에는 힌트가 없습니다.")
 
     def update_best(self, score, correct, total):
         """최고 점수보다 높으면 갱신하고 True를 돌려준다."""
@@ -138,7 +162,8 @@ class QuizGame:
         question = read_nonempty("문제를 입력하세요: ")
         choices = [read_nonempty(f"선택지 {number}: ") for number in range(1, CHOICE_COUNT + 1)]
         answer = read_int(f"정답 번호 (1-{CHOICE_COUNT}): ", 1, CHOICE_COUNT)
-        self.quizzes.append(Quiz(question, choices, answer))
+        hint = read_text("힌트 (없으면 Enter): ")
+        self.quizzes.append(Quiz(question, choices, answer, hint))
         self.save_state()
         print("✅ 퀴즈가 추가되었습니다!")
 
