@@ -152,20 +152,20 @@ class QuizGame:
         print("-" * 40)
 
     def run(self):
+        """메뉴 번호와 기능을 한 곳에 묶어 두고 종료(5)를 고를 때까지 반복한다."""
+        actions = {
+            1: self.play_quiz,
+            2: self.add_quiz,
+            3: self.list_quizzes,
+            4: self.show_score,
+        }
         try:
             while True:
                 self.show_menu()
                 choice = read_int("선택: ", 1, 5)
                 if choice == 5:
                     break
-                if choice == 1:
-                    self.play_quiz()
-                elif choice == 2:
-                    self.add_quiz()
-                elif choice == 3:
-                    self.list_quizzes()
-                else:
-                    self.show_score()
+                actions[choice]()
         except ExitRequested:
             print("⚠️ 입력이 중단되어 안전하게 종료합니다.")
         self.save_state()
