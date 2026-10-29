@@ -8,6 +8,8 @@ from io_utils import ExitRequested, read_int, read_nonempty, read_text
 from quiz import CHOICE_COUNT, Quiz
 
 LINE = "=" * 40
+MENU_TITLES = ["퀴즈 풀기", "퀴즈 추가", "퀴즈 목록", "점수 확인", "퀴즈 삭제", "종료"]
+EXIT_CHOICE = len(MENU_TITLES)  # 마지막 항목이 항상 종료
 HINT_CREDIT = 0.5  # 힌트를 쓰고 맞히면 인정되는 점수 비율
 STATE_PATH =Path(__file__).resolve().parent / "state.json"  # 프로젝트 루트
 
@@ -77,11 +79,8 @@ class QuizGame:
         print(LINE)
         print("🎯 나만의 퀴즈 게임 🎯")
         print(LINE)
-        print("1. 퀴즈 풀기")
-        print("2. 퀴즈 추가")
-        print("3. 퀴즈 목록")
-        print("4. 점수 확인")
-        print("5. 종료")
+        for number, title in enumerate(MENU_TITLES, start=1):
+            print(f"{number}. {title}")
         print(LINE)
 
     def play_quiz(self):
@@ -179,6 +178,25 @@ class QuizGame:
             print(f"[{number}] {quiz.question}")
         print("-" * 40)
 
+    def delete_quiz(self):
+        """목록에서 번호를 골라 퀴즈를 삭제하고 파일에 반영한다."""
+        if not self.quizzes:
+            print("⚠️ 삭제할 퀴즈가 없습니다.")
+            return
+        self.list_quizzes()
+        number = read_int("삭제할 퀴즈 번호 (취소: 0): ", 0, len(self.quizzes))
+        if number == 0:
+            print("삭제를 취소했습니다.")
+            return
+        target = self.quizzes[number - 1]
+        print(f"삭제 대상: {target.question}")
+        if read_int("정말 삭제할까요? (1. 예 / 2. 아니오): ", 1, 2) != 1:
+            print("삭제를 취소했습니다.")
+            return
+        del self.quizzes[number - 1]
+        self.save_state()
+        print("🗑️ 퀴즈를 삭제했습니다.")
+
     def run(self):
         """메뉴 번호와 기능을 한 곳에 묶어 두고 종료(5)를 고를 때까지 반복한다."""
         actions = {
@@ -186,12 +204,13 @@ class QuizGame:
             2: self.add_quiz,
             3: self.list_quizzes,
             4: self.show_score,
+            5: self.delete_quiz,
         }
         try:
             while True:
                 self.show_menu()
-                choice = read_int("선택: ", 1, 5)
-                if choice == 5:
+                choice = read_int("선택: ", 1, EXIT_CHOICE)
+                if choice == EXIT_CHOICE:
                     break
                 actions[choice]()
         except ExitRequested:
