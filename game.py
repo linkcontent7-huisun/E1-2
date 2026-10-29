@@ -1,5 +1,6 @@
 """게임 전체를 관리하는 QuizGame 클래스."""
 import json
+import random
 from pathlib import Path
 
 from data import default_quizzes
@@ -87,11 +88,13 @@ class QuizGame:
         if not self.quizzes:
             print("⚠️ 등록된 퀴즈가 없습니다. 먼저 퀴즈를 추가하세요.")
             return None
-        total = len(self.quizzes)
+        count = read_int(f"몇 문제를 풀까요? (1-{len(self.quizzes)}): ", 1, len(self.quizzes))
+        selected = random.sample(self.quizzes, count)  # 순서를 섞어 count개를 뽑는다
+        total = len(selected)
         correct = 0
         print()
         print(f"📝 퀴즈를 시작합니다! (총 {total}문제)")
-        for number, quiz in enumerate(self.quizzes, start=1):
+        for number, quiz in enumerate(selected, start=1):
             print("-" * 40)
             print(f"[문제 {number}]")
             quiz.display()
