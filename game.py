@@ -1,6 +1,7 @@
 """게임 전체를 관리하는 QuizGame 클래스."""
 import json
 import random
+from datetime import datetime
 from pathlib import Path
 
 from data import default_quizzes
@@ -8,7 +9,7 @@ from io_utils import ExitRequested, read_int, read_nonempty, read_text
 from quiz import CHOICE_COUNT, Quiz
 
 LINE = "=" * 40
-MENU_TITLES = ["퀴즈 풀기", "퀴즈 추가", "퀴즈 목록", "점수 확인", "퀴즈 삭제", "종료"]
+MENU_TITLES = ["퀴즈 풀기", "퀴즈 추가", "퀴즈 목록", "점수 확인", "퀴즈 삭제", "게임 기록", "종료"]
 EXIT_CHOICE = len(MENU_TITLES)  # 마지막 항목이 항상 종료
 HINT_CREDIT = 0.5  # 힌트를 쓰고 맞히면 인정되는 점수 비율
 STATE_PATH =Path(__file__).resolve().parent / "state.json"  # 프로젝트 루트
@@ -21,6 +22,7 @@ class QuizGame:
         self.best_score = None  # 아직 풀지 않았으면 None
         self.best_correct = 0
         self.best_total = 0
+        self.history = []  # 게임 기록: {"played_at", "total", "correct", "hints", "score"}
         self.load_state()
 
     def reset_to_default(self):
@@ -28,6 +30,7 @@ class QuizGame:
         self.best_score = None
         self.best_correct = 0
         self.best_total = 0
+        self.history = []
 
     def load_state(self):
         """state.json을 읽는다. 없으면 기본 데이터, 손상되었으면 안내 후 기본 데이터로 복구한다."""
@@ -41,10 +44,14 @@ class QuizGame:
             best_score = data["best_score"]
             if best_score is not None and not isinstance(best_score, int):
                 raise ValueError("best_score는 정수 또는 null이어야 합니다.")
+            history = data.get("history", [])  # 기록 기능이 생기기 전 파일도 읽을 수 있게
+            if not isinstance(history, list) or not all(self.is_valid_record(item) for item in history):
+                raise ValueError("history 형식이 올바르지 않습니다.")
             self.quizzes = quizzes
             self.best_score = best_score
             self.best_correct = data.get("best_correct", 0)
             self.best_total = data.get("best_total", 0)
+            self.history = history
         except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
             print(f"⚠️ 데이터 파일을 읽을 수 없습니다 ({type(error).__name__}). 기본 퀴즈로 복구합니다.")
             self.backup_broken_file()
@@ -61,13 +68,19 @@ class QuizGame:
         except OSError:
             pass
 
+    @staticmethod
+    def is_valid_record(item):
+        keys = ("played_at", "total", "correct", "hints", "score")
+        return isinstance(item, dict) and all(key in item for key in keys)
+
     def save_state(self):
-        """퀴즈와 최고 점수를 UTF-8 JSON으로 저장한다."""
+        """퀴즈, 최고 점수, 게임 기록을 UTF-8 JSON으로 저장한다."""
         data = {
             "quizzes": [quiz.to_dict() for quiz in self.quizzes],
             "best_score": self.best_score,
             "best_correct": self.best_correct,
             "best_total": self.best_total,
+            "history": self.history,
         }
         try:
             with open(self.state_path, "w", encoding="utf-8") as file:
@@ -115,10 +128,30 @@ class QuizGame:
         if hints_used:
             print(f"💡 힌트 {hints_used}회 사용: 힌트를 쓴 정답은 {HINT_CREDIT}점만 인정됩니다.")
         if self.update_best(score, correct, total):
-            self.save_state()
             print("🎉 새로운 최고 점수입니다!")
+        self.history.append({
+            "played_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "total": total,
+            "correct": correct,
+            "hints": hints_used,
+            "score": score,
+        })
+        self.save_state()
         print(LINE)
         return score
+
+    def show_history(self):
+        """모든 게임 기록을 최근 순으로 보여준다."""
+        if not self.history:
+            print("⚠️ 아직 게임 기록이 없습니다.")
+            return
+        print()
+        print(f"🗂️ 게임 기록 (총 {len(self.history)}회, 최근 순)")
+        print("-" * 40)
+        for record in reversed(self.history):
+            print(f"{record['played_at']}  {record['total']}문제 중 {record['correct']}문제 정답, "
+                  f"힌트 {record['hints']}회, {record['score']}점")
+        print("-" * 40)
 
     def ask_question(self, quiz):
         """한 문제의 답을 받는다. 0을 입력하면 힌트를 볼 수 있다(문제당 1회).
@@ -205,6 +238,7 @@ class QuizGame:
             3: self.list_quizzes,
             4: self.show_score,
             5: self.delete_quiz,
+            6: self.show_history,
         }
         try:
             while True:
