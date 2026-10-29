@@ -21,6 +21,32 @@ class QuizGame:
         print("5. 종료")
         print(LINE)
 
+    def play_quiz(self):
+        """저장된 퀴즈를 순서대로 출제하고 결과를 보여준다."""
+        if not self.quizzes:
+            print("⚠️ 등록된 퀴즈가 없습니다. 먼저 퀴즈를 추가하세요.")
+            return None
+        total = len(self.quizzes)
+        correct = 0
+        print()
+        print(f"📝 퀴즈를 시작합니다! (총 {total}문제)")
+        for number, quiz in enumerate(self.quizzes, start=1):
+            print("-" * 40)
+            print(f"[문제 {number}]")
+            quiz.display()
+            print()
+            choice = read_int("정답 입력: ", 1, len(quiz.choices))
+            if quiz.is_correct(choice):
+                correct += 1
+                print("✅ 정답입니다!")
+            else:
+                print(f"❌ 오답입니다. 정답은 {quiz.answer}번입니다.")
+        score = round(correct / total * 100)
+        print(LINE)
+        print(f"🏆 결과: {total}문제 중 {correct}문제 정답! ({score}점)")
+        print(LINE)
+        return score
+
     def run(self):
         try:
             while True:
@@ -28,7 +54,10 @@ class QuizGame:
                 choice = read_int("선택: ", 1, 5)
                 if choice == 5:
                     break
-                print("(준비 중인 기능입니다)")
+                if choice == 1:
+                    self.play_quiz()
+                else:
+                    print("(준비 중인 기능입니다)")
         except ExitRequested:
             print("⚠️ 입력이 중단되어 안전하게 종료합니다.")
         print("👋 게임을 종료합니다.")
